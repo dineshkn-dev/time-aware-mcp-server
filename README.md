@@ -28,6 +28,22 @@ An MCP (Model Context Protocol) server that makes your ChatGPT Plus account **ti
    - Your MCP endpoint will be: `https://YOUR_PROJECT.vercel.app/api/mcp`
    - **Note**: Vercel Hobby (free) tier limits serverless functions to 10 seconds. This MCP server typically responds in milliseconds.
 
+### GitHub website URL (optional)
+
+Vercel automatically adds the deployment URL to your GitHub repo's "Website" field. To avoid exposing the endpoint:
+
+1. On GitHub: repo → **About** (gear icon) → set **Website** to your repo URL (e.g. `https://github.com/dineshkn-dev/time-aware-mcp-server`) instead of leaving it blank. Vercel won't overwrite it.
+2. Add optional auth (see [Authentication](#authentication) below).
+
+## Authentication
+
+To restrict access, set **`MCP_AUTH_TOKEN`** in Vercel (Project → Settings → Environment Variables). When set, requests must include either:
+
+- **Header**: `Authorization: Bearer <your-token>`
+- **Query param**: `?token=<your-token>` (use this in the ChatGPT Connector URL: `https://your-project.vercel.app/api/mcp?token=your-secret`)
+
+Use a long, random string (e.g. from `openssl rand -hex 32`). Unauthenticated requests return `401 Unauthorized`.
+
 ## Connect to ChatGPT Plus
 
 1. **Enable Developer Mode**:
@@ -38,7 +54,7 @@ An MCP (Model Context Protocol) server that makes your ChatGPT Plus account **ti
    - Go to **Settings → Connectors → Create**
    - **Connector name**: `Time Aware` (or any name you prefer)
    - **Description**: `Provides the exact current date and time. Makes conversations time-aware so ChatGPT includes date/time in responses.`
-   - **Connector URL**: `https://YOUR_PROJECT.vercel.app/api/mcp`
+   - **Connector URL**: `https://YOUR_PROJECT.vercel.app/api/mcp` (or add `?token=YOUR_MCP_AUTH_TOKEN` if using auth)
    - Click **Create**
 
 3. **Use in conversations**:

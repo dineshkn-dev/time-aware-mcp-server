@@ -5,6 +5,22 @@ import { z } from "zod";
 const DEFAULT_TZ = "Asia/Kolkata";
 
 /**
+ * Optional: When MCP_AUTH_TOKEN is set, require valid token via:
+ * - Authorization: Bearer <token> header, or
+ * - ?token=<token> query parameter (for ChatGPT connector URL)
+ */
+function isAuthenticated(req: NextRequest): boolean {
+  const secret = process.env.MCP_AUTH_TOKEN?.trim();
+  if (!secret) return true;
+
+  const header = req.headers.get("authorization");
+  const bearer = header?.startsWith("Bearer ") ? header.slice(7) : null;
+  const queryToken = req.nextUrl.searchParams.get("token");
+
+  return bearer === secret || queryToken === secret;
+}
+
+/**
  * Returns true if this looks like an MCP client request (has session or expects SSE).
  * Plain browser GETs lack these headers and get a friendly response instead.
  */
@@ -164,7 +180,16 @@ const FRIENDLY_GET_RESPONSE = {
   mcp: "Connect with an MCP client (e.g. ChatGPT, MCP Inspector) using POST",
 };
 
+function requireAuth(req: NextRequest): Response | null {
+  if (!isAuthenticated(req)) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  return null;
+}
+
 export async function GET(req: NextRequest) {
+  const authError = requireAuth(req);
+  if (authError) return authError;
   try {
     if (!isMcpClientRequest(req)) {
       return Response.json(FRIENDLY_GET_RESPONSE, { status: 200 });
@@ -175,4 +200,14 @@ export async function GET(req: NextRequest) {
   }
 }
 
-export { handler as POST, handler as DELETE };
+export async function POST(req: NextRequest) {
+  const authError = requireAuth(req);
+  if (authError) return authError;
+  return handler(req);
+}
+
+export async function DELETE(req: NextRequest) {
+  const authError = requireAuth(req);
+  if (authError) return authError;
+  return handler(req);
+}
